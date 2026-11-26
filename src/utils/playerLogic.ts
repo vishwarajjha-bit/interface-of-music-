@@ -1,4 +1,11 @@
-import type { LyricLine, MoodCategory, RepeatMode, Track, WaveRipple } from '../types/music';
+import type {
+  EqPresetName,
+  LyricLine,
+  MoodCategory,
+  RepeatMode,
+  Track,
+  WaveRipple,
+} from '../types/music';
 
 /**
  * Formats seconds into M:SS with clean padding for tabular display.
@@ -170,4 +177,62 @@ export function stepWaves(waves: WaveRipple[], deltaMs: number): WaveRipple[] {
   return waves
     .map((wave) => ({ ...wave, age: wave.age + deltaMs }))
     .filter((wave) => wave.age < wave.duration);
+}
+
+export const EQ_BAND_FREQS = ['60 Hz', '230 Hz', '910 Hz', '3.6 kHz', '14 kHz'] as const;
+
+export const EQ_PRESETS: Record<Exclude<EqPresetName, 'Custom'>, number[]> = {
+  Flat: [0, 0, 0, 0, 0],
+  Bass: [6.5, 4.5, 0.5, -1, 1],
+  Dance: [5, 2.5, -1.5, 3, 4.5],
+  Classic: [2.5, 1, -0.5, 2.5, 4],
+  Vocal: [-2, 0.5, 4.5, 3.5, 1],
+};
+
+export function clampEqGain(value: number, min = -12, max = 12): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(Math.max(Math.round(value * 2) / 2, min), max);
+}
+
+export function getEqPresetBands(preset: Exclude<EqPresetName, 'Custom'>): number[] {
+  return [...EQ_PRESETS[preset]];
+}
+
+export function formatDb(db: number): string {
+  const fixed = db.toFixed(1);
+  return db > 0 ? `+${fixed} dB` : `${fixed} dB`;
+}
+
+/**
+ * Generates an SVG smooth cubic-bezier path string for 5 EQ band gains (-12..+12 dB).
+ */
+export function buildEqCurvePath(bands: number[], width = 500, height = 140): string {
+  const safeBands = bands.length > 0 ? bands : [0, 0, 0, 0, 0];
+  const padX = 24;
+  const padY = 18;
+  const usableW = width - padX * 2;
+  const usableH = height - padY * 2;
+
+  const points = safeBands.map((gain, i) => {
+    const x =
+      safeBands.length === 1
+        ? width / 2
+        : padX + (i / (safeBands.length - 1)) * usableW;
+    const normalized = (12 - clampEqGain(gain)) / 24; // +12 at top, -12 at bottom
+    const y = padY + normalized * usableH;
+    return { x, y };
+  });
+
+  if (points.length === 1) {
+    return `M ${points[0].x} ${points[0].y}`;
+  }
+
+  let path = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[i];
+    const p1 = points[i + 1];
+    const midX = ((p0.x + p1.x) / 2).toFixed(1);
+    path += ` C ${midX} ${p0.y.toFixed(1)}, ${midX} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+  }
+  return path;
 }

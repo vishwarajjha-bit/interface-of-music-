@@ -2,5 +2,7 @@
   "name": "Ondine",
   "description": "Apple Liquid Glass spatial music streaming interface with interactive water-wave ripples, designed for Telegram Mini App integration.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

@@ -1,4 +1,5 @@
 import { Heart, ListPlus, Play, Plus } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useState, type FormEvent } from 'react';
 import type { Playlist, Track } from '../types/music';
 import { formatDuration, validatePlaylistName } from '../utils/playerLogic';
@@ -82,17 +83,31 @@ export function CrateView({
           ).map((tab) => {
             const active = section === tab.id;
             return (
-              <LiquidButton
+              <button
                 key={tab.id}
                 type="button"
                 role="tab"
                 aria-selected={active}
-                variant={active ? 'elevated' : 'ghost'}
                 onClick={() => setSection(tab.id)}
-                className="min-h-[40px] px-3.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0"
+                className={`relative liquid-press min-h-[40px] px-3.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/80 ${
+                  active ? 'text-white' : 'text-slate-300 hover:text-white'
+                }`}
               >
-                {tab.label}
-              </LiquidButton>
+                {active && (
+                  <motion.span
+                    layoutId="crate-tab-pill"
+                    aria-hidden="true"
+                    transition={{
+                      type: 'spring',
+                      stiffness: 420,
+                      damping: 20,
+                      mass: 0.9,
+                    }}
+                    className="absolute inset-0 rounded-xl liquid-glass-elevated"
+                  />
+                )}
+                <span className="relative z-10">{tab.label}</span>
+              </button>
             );
           })}
         </div>

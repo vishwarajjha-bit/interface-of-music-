@@ -1,9 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildEqCurvePath,
+  clampEqGain,
   filterTracks,
+  formatDb,
   formatDuration,
   getActiveLyricIndex,
+  getEqPresetBands,
   getNextTrackIndex,
   getPrevTrackIndex,
   spawnWave,
@@ -114,3 +118,17 @@ test('spawnWave and stepWaves advance and expire ripples cleanly', () => {
   waves = stepWaves(waves, 300);
   assert.equal(waves.length, 0);
 });
+
+test('EQ presets, clamping, and curve path generation work accurately', () => {
+  assert.deepEqual(getEqPresetBands('Flat'), [0, 0, 0, 0, 0]);
+  assert.equal(getEqPresetBands('Bass')[0], 6.5);
+  assert.equal(clampEqGain(20), 12);
+  assert.equal(clampEqGain(-18), -12);
+  assert.equal(clampEqGain(3.4), 3.5);
+  assert.equal(formatDb(4.5), '+4.5 dB');
+  assert.equal(formatDb(0), '0.0 dB');
+  const path = buildEqCurvePath([0, 0, 0, 0, 0], 500, 140);
+  assert.equal(path.startsWith('M 24.0 70.0'), true);
+  assert.equal(path.includes('C '), true);
+});
+

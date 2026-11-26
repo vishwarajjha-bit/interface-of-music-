@@ -1,0 +1,16 @@
+[Unit]
+Description=AloneMusic Telegram VC Bot (Ondine Bridge)
+After=network-online.target ondine-miniapp.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ondine-music/telegram-bot
+EnvironmentFile=/home/ubuntu/ondine-music/telegram-bot/.env
+ExecStart=/home/ubuntu/ondine-music/telegram-bot/.venv/bin/python -m AloneMusic
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

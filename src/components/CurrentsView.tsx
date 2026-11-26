@@ -1,20 +1,31 @@
-import { Heart, Pause, Play, Plus, Search, X } from 'lucide-react';
+import { Heart, Loader2, Pause, Play, Plus, Radio, Search, X } from 'lucide-react';
+import type { FormEvent } from 'react';
 import type { MoodCategory, Track } from '../types/music';
 import { formatDuration } from '../utils/playerLogic';
 import { LiquidButton } from './LiquidSurface';
+import { SegmentedGlass, type SegmentedOption } from './SegmentedGlass';
 
 interface CurrentsViewProps {
   tracks: Track[];
   filteredTracks: Track[];
+  remoteTracks: Track[];
+  remoteSource: string | null;
+  remoteSearching: boolean;
+  remoteError: string | null;
   activeMood: MoodCategory;
   searchQuery: string;
   currentTrack: Track;
   isPlaying: boolean;
   likedIds: string[];
   queueIds: string[];
+  canSendToVc: boolean;
+  vcGroupTitle?: string;
   onMoodChange: (mood: MoodCategory) => void;
   onSearchChange: (q: string) => void;
+  onSearchRemote: (q: string) => void;
   onPlayTrack: (trackId: string) => void;
+  onPlayRemoteTrack: (track: Track) => void;
+  onEnqueueToVc: (track: Track) => void;
   onTogglePlay: () => void;
   onAddToQueue: (trackId: string) => void;
   onToggleLike: (trackId: string) => void;
@@ -22,26 +33,35 @@ interface CurrentsViewProps {
   onResetFilters: () => void;
 }
 
-const MOODS: MoodCategory[] = [
-  'All',
-  'Deep Focus',
-  'Midnight Drive',
-  'Velvet Acoustic',
-  'Ambient Drift',
+const MOOD_OPTIONS: SegmentedOption<MoodCategory>[] = [
+  { value: 'All', label: 'All' },
+  { value: 'Deep Focus', label: 'Deep Focus' },
+  { value: 'Midnight Drive', label: 'Midnight Drive' },
+  { value: 'Velvet Acoustic', label: 'Velvet Acoustic' },
+  { value: 'Ambient Drift', label: 'Ambient Drift' },
 ];
 
 export function CurrentsView({
   tracks,
   filteredTracks,
+  remoteTracks,
+  remoteSource,
+  remoteSearching,
+  remoteError,
   activeMood,
   searchQuery,
   currentTrack,
   isPlaying,
   likedIds,
   queueIds,
+  canSendToVc,
+  vcGroupTitle,
   onMoodChange,
   onSearchChange,
+  onSearchRemote,
   onPlayTrack,
+  onPlayRemoteTrack,
+  onEnqueueToVc,
   onTogglePlay,
   onAddToQueue,
   onToggleLike,
@@ -50,9 +70,16 @@ export function CurrentsView({
 }: CurrentsViewProps) {
   const featured = tracks[0];
 
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      onSearchRemote(searchQuery);
+    }
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Inline Compact Now-Playing Strip (scrolls naturally, keeps sticky cap low) */}
+      {/* Inline Compact Now-Playing Strip */}
       <div className="liquid-glass-subtle rounded-2xl p-3 sm:px-5 flex items-center justify-between gap-4">
         <button
           type="button"
@@ -96,12 +123,14 @@ export function CurrentsView({
         >
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full blur-3xl opacity-25"
-            style={{ background: featured.palette.primary }}
+            className="pointer-events-none absolute inset-0 opacity-20"
+            style={{
+              background: `radial-gradient(circle at 85% 20%, ${featured.palette.primary}88 0%, transparent 50%)`,
+            }}
           />
           <div className="md:col-span-8 space-y-3 relative z-10">
             <p className="text-xs font-mono-tabular text-sky-200/90">
-              Curated Stream · {tracks.length} Lossless Masters
+              Curated & Live Stream · 5-Mirror Race Engine
             </p>
             <h1
               className="font-display text-2xl sm:text-4xl font-semibold tracking-tight text-white"
@@ -110,8 +139,8 @@ export function CurrentsView({
               Midnight Glass & Acoustic Tides
             </h1>
             <p className="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
-              Spacious ambient textures, felt piano studies, and slow nocturnal pulses arranged for
-              distraction-free listening.
+              Search any song, YouTube, Spotify, or SoundCloud track to stream natively with your
+              live EQ—or queue straight into your Group Voice Chat.
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <LiquidButton
@@ -149,68 +178,161 @@ export function CurrentsView({
 
       {/* Search & Mood Filter Controls */}
       <section aria-label="Filter currents" className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search tracks, artists, or albums..."
-              aria-label="Search tracks, artists, or albums"
-              className="w-full h-11 pl-10 pr-10 rounded-2xl liquid-glass-subtle text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-300/80"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => onSearchChange('')}
-                aria-label="Clear search query"
-                className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white cursor-pointer"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-
-          <div
-            role="group"
-            aria-label="Mood filter"
-            className="flex items-center gap-1.5 overflow-x-auto pb-1"
-          >
-            {MOODS.map((mood) => {
-              const active = activeMood === mood;
-              return (
-                <LiquidButton
-                  key={mood}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <form onSubmit={handleSubmit} className="flex items-center gap-2 flex-1 max-w-xl">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Search any song or paste link (YouTube, Spotify, Saavn)..."
+                aria-label="Search tracks, artists, or paste music link"
+                className="w-full h-11 pl-10 pr-10 rounded-2xl liquid-glass-subtle text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-300/80"
+              />
+              {searchQuery && (
+                <button
                   type="button"
-                  variant={active ? 'elevated' : 'subtle'}
-                  onClick={() => onMoodChange(mood)}
-                  aria-pressed={active}
-                  className={`min-h-[40px] px-3.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 ${
-                    active ? 'text-white' : 'text-slate-300'
-                  }`}
+                  onClick={() => onSearchChange('')}
+                  aria-label="Clear search query"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white cursor-pointer"
                 >
-                  {mood}
-                </LiquidButton>
-              );
-            })}
-          </div>
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <LiquidButton
+              type="submit"
+              variant="subtle"
+              disabled={!searchQuery.trim() || remoteSearching}
+              className="h-11 px-4 rounded-2xl text-xs font-medium whitespace-nowrap shrink-0"
+            >
+              {remoteSearching ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <span>Search Online</span>
+              )}
+            </LiquidButton>
+          </form>
+
+          <SegmentedGlass
+            groupId="currents-mood-pill"
+            ariaLabel="Mood filter"
+            options={MOOD_OPTIONS}
+            value={activeMood}
+            onChange={onMoodChange}
+          />
         </div>
 
-        {/* Filtered Results List */}
+        {/* Live Multi-Mirror Search Results */}
+        {(remoteTracks.length > 0 || remoteError || remoteSearching) && (
+          <div className="liquid-glass rounded-3xl p-3 sm:p-5 space-y-2">
+            <div className="flex items-center justify-between px-2 pb-3 border-b border-white/10">
+              <h2 className="font-display text-base font-semibold text-white">Online Stream Results</h2>
+              <span className="text-xs font-mono-tabular text-sky-200/85">
+                {remoteSearching
+                  ? 'Racing 5 sources...'
+                  : remoteSource
+                    ? `Fastest source: ${remoteSource}`
+                    : 'No online matches'}
+              </span>
+            </div>
+
+            {remoteError && (
+              <p className="px-2 py-3 text-xs text-amber-200" role="status">
+                {remoteError}
+              </p>
+            )}
+
+            <ul className="divide-y divide-white/[0.07]">
+              {remoteTracks.map((track) => {
+                const isCurrent = track.id === currentTrack.id;
+                return (
+                  <li key={track.id} className="py-2">
+                    <div
+                      className={`flex items-center justify-between gap-3 rounded-2xl p-2 transition-colors ${
+                        isCurrent ? 'bg-white/[0.11]' : 'hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onPlayRemoteTrack(track)}
+                        aria-label={`Stream ${track.title} by ${track.artist}`}
+                        className="flex flex-1 min-w-0 items-center gap-3.5 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 rounded-xl"
+                      >
+                        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-slate-900">
+                          <img
+                            src={track.coverUrl}
+                            alt=""
+                            referrerPolicy="no-referrer"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className={`text-sm sm:text-base font-medium truncate ${
+                              isCurrent ? 'text-sky-200' : 'text-white'
+                            }`}
+                          >
+                            {track.title}
+                          </p>
+                          <p className="text-xs text-slate-400 truncate">
+                            {track.artist}
+                            <span className="mx-1.5" aria-hidden="true">
+                              ·
+                            </span>
+                            <span className="font-mono-tabular">
+                              {formatDuration(track.duration)}
+                            </span>
+                          </p>
+                        </div>
+                      </button>
+
+                      {canSendToVc && (
+                        <LiquidButton
+                          type="button"
+                          variant="subtle"
+                          onClick={() => onEnqueueToVc(track)}
+                          aria-label={`Send ${track.title} to ${vcGroupTitle || 'Group VC'}`}
+                          className="min-h-[44px] px-3 rounded-xl text-xs whitespace-nowrap shrink-0"
+                        >
+                          <Radio className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />
+                          <span>Send to VC</span>
+                        </LiquidButton>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {/* Curated Catalog Results */}
         {filteredTracks.length === 0 ? (
           <div className="liquid-glass rounded-3xl p-10 text-center space-y-3">
-            <h2 className="font-display text-lg font-semibold text-white">No matching tracks</h2>
+            <h2 className="font-display text-lg font-semibold text-white">No curated catalog match</h2>
             <p className="text-sm text-slate-400 max-w-md mx-auto">
-              Nothing in the current catalog matches &ldquo;{searchQuery.trim() || activeMood}&rdquo;.
+              Nothing in the local catalog matches &ldquo;{searchQuery.trim() || activeMood}&rdquo;.
+              Use Search Online above to fetch live tracks.
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+              {searchQuery.trim() && (
+                <LiquidButton
+                  type="button"
+                  variant="primary"
+                  onClick={() => onSearchRemote(searchQuery)}
+                  className="h-10 px-4 rounded-xl text-xs"
+                >
+                  Search Online for &ldquo;{searchQuery.trim()}&rdquo;
+                </LiquidButton>
+              )}
               <LiquidButton
                 type="button"
-                variant="primary"
+                variant="subtle"
                 onClick={onResetFilters}
                 className="h-10 px-4 rounded-xl text-xs"
               >

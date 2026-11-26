@@ -5,8 +5,11 @@ interface TelegramWebAppLike {
   expand?: () => void;
   platform?: string;
   colorScheme?: 'dark' | 'light';
+  initData?: string;
   initDataUnsafe?: {
+    start_param?: string;
     user?: {
+      id?: number;
       first_name?: string;
       username?: string;
     };
@@ -24,8 +27,35 @@ function getTg(): TelegramWebAppLike | null {
   return tg ?? null;
 }
 
+export function extractStartParam(): string {
+  const tg = getTg();
+  const unsafeParam = tg?.initDataUnsafe?.start_param?.trim();
+  if (unsafeParam) return unsafeParam;
+
+  if (typeof window !== 'undefined') {
+    const search = new URLSearchParams(window.location.search);
+    const vcParam = search.get('vc') || search.get('tgWebAppStartParam');
+    if (vcParam) {
+      return vcParam.startsWith('vc_') ? vcParam : `vc_${vcParam}`;
+    }
+    const hash = window.location.hash.replace(/^#/, '');
+    if (hash) {
+      const hashParams = new URLSearchParams(hash);
+      const hp = hashParams.get('tgWebAppStartParam');
+      if (hp) return hp;
+    }
+  }
+  return '';
+}
+
+export function parseVcChatIdFromStartParam(startParam: string): string | null {
+  const match = /^vc_(-?\d{3,22})$/.exec(startParam.trim());
+  return match ? match[1] : null;
+}
+
 export function initTelegramMiniApp(): TelegramContextInfo {
   const tg = getTg();
+  const startParam = extractStartParam();
   if (tg) {
     try {
       tg.ready?.();
@@ -39,7 +69,9 @@ export function initTelegramMiniApp(): TelegramContextInfo {
       platform: tg.platform || 'telegram',
       userName: user?.first_name || user?.username || 'Telegram Listener',
       colorScheme: tg.colorScheme === 'light' ? 'light' : 'dark',
-      initDataReady: true,
+      initDataReady: Boolean(tg.initData),
+      rawInitData: tg.initData || '',
+      startParam,
     };
   }
 
@@ -49,6 +81,8 @@ export function initTelegramMiniApp(): TelegramContextInfo {
     userName: 'Guest Session',
     colorScheme: 'dark',
     initDataReady: false,
+    rawInitData: '',
+    startParam,
   };
 }
 
@@ -70,6 +104,7 @@ export function buildBotSyncPayload(track: Track, isPlaying: boolean, progress: 
   return {
     event: 'ondine_player_sync',
     trackId: track.id,
+    vidid: track.vidid || track.id,
     title: track.title,
     artist: track.artist,
     isPlaying,

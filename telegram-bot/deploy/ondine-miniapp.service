@@ -1,0 +1,17 @@
+[Unit]
+Description=Ondine Liquid Glass Mini App & Bot Bridge Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/ondine-music
+Environment=NODE_ENV=production
+EnvironmentFile=/home/ubuntu/ondine-music/.env
+ExecStart=/usr/bin/npx tsx server.ts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
