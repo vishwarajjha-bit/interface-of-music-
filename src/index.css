@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+
+  html,
+  body {
+    font-family: var(--font-sans);
+    background-color: #07090e;
+    color: #f1f5f9;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono-tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Apple Liquid Glass Material System */
+.liquid-glass {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.115) 0%,
+    rgba(255, 255, 255, 0.038) 52%,
+    rgba(255, 255, 255, 0.075) 100%
+  );
+  backdrop-filter: blur(32px) saturate(185%);
+  -webkit-backdrop-filter: blur(32px) saturate(185%);
+  border: 1px solid rgba(255, 255, 255, 0.19);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.06),
+    0 24px 56px -16px rgba(0, 0, 0, 0.55);
+}
+
+.liquid-glass-elevated {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.165) 0%,
+    rgba(255, 255, 255, 0.055) 48%,
+    rgba(255, 255, 255, 0.11) 100%
+  );
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.44),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 30px 70px -18px rgba(0, 0, 0, 0.65);
+}
+
+.liquid-glass-subtle {
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.075) 0%,
+    rgba(255, 255, 255, 0.025) 100%
+  );
+  backdrop-filter: blur(22px) saturate(165%);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+    0 12px 32px -12px rgba(0, 0, 0, 0.45);
+}
+
+/* Tactile liquid press curve */
+.liquid-press {
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-press:active {
+  transform: scale(0.965);
+}
+
+/* Local specular ripple inside interactive glass controls */
+@keyframes local-glass-wave {
+  0% {
+    transform: translate(-50%, -50%) scale(0.15);
+    opacity: 0.72;
+  }
+  55% {
+    opacity: 0.32;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.85);
+    opacity: 0;
+  }
+}
+
+.animate-local-wave {
+  animation: local-glass-wave 680ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes gentle-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-gentle-float {
+  animation: gentle-float 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-local-wave,
+  .animate-gentle-float {
+    animation: none !important;
+  }
+  .liquid-press {
+    transition: none !important;
+  }
+}
+
+/* Clean scrollbar for glass containers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* Sleek Apple glass hairline range slider */
+.liquid-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.16);
+  outline: none;
+}
+
+.liquid-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-range:hover::-webkit-slider-thumb,
+.liquid-range:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+.liquid-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
